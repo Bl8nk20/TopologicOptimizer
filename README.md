@@ -26,6 +26,16 @@ like building-area, mounting-points or allowed material type / material amt
 
 ## which Design Patterns to use
 
+| Komponente           | Design Pattern       | Zweck                                |
+| -------------------- | -------------------- | ------------------------------------ |
+| CAD-Backends         | Strategy / Adapter   | Austauschbare CAD-Systeme            |
+| Optimierer           | Template Method      | Gemeinsames Optimierungs-Framework   |
+| FEM-Solver           | Facade               | Versteckt komplexe Solver-APIs       |
+| Konfiguration        | pydantic / Builder   | Strukturierte, überprüfbare Settings |
+| GUI / CLI Feedback   | Observer             | Fortschritt sichtbar machen          |
+| Schnittstellen/Tests | Dependency Injection | Testbarkeit und Modularität          |
+
+
 ## To-Do's
 
 ### Topologic Optimizer
@@ -35,7 +45,3 @@ like building-area, mounting-points or allowed material type / material amt
 * [ ] Apply Forces on Mesh
 * [ ] Remove unneccessary Nodes & Edges
 * [ ] Iterate until Satisfied
-
-### SVD
-
-* [ ] Receive Imgage / Template / Complex Data-Structure
