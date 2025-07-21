@@ -112,17 +112,3 @@ if(ENABLE_TESTING)
     enable_testing()
     add_subdirectory(tests)
 endif()
-
-
-# INSTALL TARGETS
-
-#install(
-#    TARGETS ${EXECUTABLE_NAME}
-#   ARCHIVE DESTINATION lib
-#  LIBRARY DESTINATION lib
-# RUNTIME DESTINATION bin)
-
-#install(
-#    TARGETS "LibFoo" "LibBar"
-#    ARCHIVE DESTINATION lib
-#    LIBRARY DESTINATION lib)

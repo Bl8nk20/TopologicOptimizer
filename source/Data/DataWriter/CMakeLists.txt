@@ -2,7 +2,7 @@
 set(Data_writer_LIB_Name DataWriter)
 
 # Header files (header-only => nur .hpp)
-set(Data_reader_LIB_Headers
+set(Data_writer_LIB_Headers
     include/${Data_writer_LIB_Name}/DataWriter.hpp
 )
 
