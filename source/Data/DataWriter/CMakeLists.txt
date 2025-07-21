@@ -1,19 +1,18 @@
-set(Data_writer_Lib_Name
-    DataWriter)
+# Library Name
+set(Data_writer_LIB_Name DataWriter)
 
-set(Data_writer_Lib_Neaders
-    include/${Data_writer_Lib_Name}/DataWriter.hpp
+# Header files (header-only => nur .hpp)
+set(Data_reader_LIB_Headers
+    include/${Data_writer_LIB_Name}/DataWriter.hpp
 )
 
-set(Data_writer_Lib_Sources
-    DataWriter.cpp
+# Header-only Library – INTERFACE
+add_library(${Data_writer_LIB_Name} INTERFACE)
+
+# Include-Verzeichnis bekannt machen
+target_include_directories(${Data_writer_LIB_Name}
+    INTERFACE
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+    $<INSTALL_INTERFACE:include>
 )
 
-add_library(${Data_writer_Lib_Name} 
-    STATIC
-    ${Data_writer_Lib_Neaders} 
-    ${Data_writer_Lib_Sources})
-
-target_include_directories( ${Data_writer_Lib_Name} 
-    PUBLIC 
-    include)
