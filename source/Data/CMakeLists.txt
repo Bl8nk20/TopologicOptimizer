@@ -1,3 +1,2 @@
 add_subdirectory(DataReader)
 add_subdirectory(DataWriter)
-add_subdirectory(DataHandling)
