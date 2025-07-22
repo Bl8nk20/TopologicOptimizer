@@ -1,5 +1,8 @@
 #pragma once
 
+#include <optional>
+#include "DS_Graph/Graph.hpp"
+
 namespace TopologicOptimizer::Graph::Builder
 {
     template <typename IDType,
@@ -7,10 +10,8 @@ namespace TopologicOptimizer::Graph::Builder
             typename EdgeWeight = double,
             typename EdgePayload = void>
     class GraphBuilder {
+        Graph::Essentials::Graph <IDType, NodePayload, EdgeWeight, EdgePayload> graph;
     public:
-        GraphBuilder(GraphType type = GraphType::Directed)
-            : graph(type) {}
-
         GraphBuilder& addNode(const IDType& id, const std::optional<NodePayload>& payload = std::nullopt) {
             if constexpr (std::is_same_v<NodePayload, void>) {
                 graph.nodes.emplace(id, Node<IDType>(id));
@@ -37,7 +38,7 @@ namespace TopologicOptimizer::Graph::Builder
                 addNode(to);
 
             // Bei ungerichtetem Graph beide Richtungen eintragen
-            if (graph.type == GraphType::Undirected && from != to) {
+            if (from != to) {
                 if constexpr (std::is_same_v<EdgePayload, void>) {
                     graph.edges.emplace_back(to, from, weight);
                 } else {
@@ -48,11 +49,8 @@ namespace TopologicOptimizer::Graph::Builder
             return *this;
         }
 
-        Graph<IDType, NodePayload, EdgeWeight, EdgePayload> build() {
+        Graph::Essentials::Graph<IDType, NodePayload, EdgeWeight, EdgePayload> build() {
             return graph;
         }
-
-    private:
-        Graph<IDType, NodePayload, EdgeWeight, EdgePayload> graph;
     };
 }

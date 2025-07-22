@@ -4,6 +4,9 @@
 #include <unordered_map>
 #include <vector>
 
+#include "Node.hpp"
+#include "Edge.hpp"
+
 namespace TopologicOptimizer::Graph::Essentials
 {
     template <typename IDType,

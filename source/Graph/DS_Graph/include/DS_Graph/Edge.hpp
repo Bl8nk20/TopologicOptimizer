@@ -12,7 +12,6 @@ namespace TopologicOptimizer::Graph::Essentials
         IDType to;
         WeightType weight;
         PayloadType data;
-
         Edge(IDType from, IDType to, WeightType weight, PayloadType data)
             : from(from), to(to), weight(weight), data(data) {}
     };
