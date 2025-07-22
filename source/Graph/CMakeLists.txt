@@ -1,18 +1,23 @@
-# Build a library called "Graph" from all graph modules
 project(Graph LANGUAGES CXX)
 
-file(GLOB_RECURSE GRAPH_HEADERS
-    Builder_Graph/*.hpp
-    DS_Graph/*.hpp
-)
-
+# Create the top-level interface target
 add_library(Graph INTERFACE)
 
-# Header-only: Interface includes
-target_include_directories(Graph INTERFACE
-    ${CMAKE_CURRENT_SOURCE_DIR}/DS_Graph/include/DS_Graph
-    ${CMAKE_CURRENT_SOURCE_DIR}/Builder_Graph/include/Builder_Graph
+# Add include directories to the Graph target
+target_include_directories(Graph
+    INTERFACE
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/../include>
+    $<INSTALL_INTERFACE:include>
 )
 
-# Header-Dateien in der IDE sichtbar machen
+# Collect headers for IDE visibility (optional)
+file(GLOB_RECURSE GRAPH_HEADERS
+    ${CMAKE_CURRENT_SOURCE_DIR}/../include/Graph/Builder_Graph/*.hpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/../include/Graph/DS_Graph/*.hpp
+)
+
+# Make headers visible in IDEs
 target_sources(Graph INTERFACE ${GRAPH_HEADERS})
+
+# Optionally link components to the Graph target
+target_link_libraries(Graph INTERFACE DS_Graph Builder_Graph)
