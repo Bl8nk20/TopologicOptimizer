@@ -1,0 +1,8 @@
+version: "3.8"
+services:
+  topopt:
+    build: .
+    volumes:
+      - .:/app        # bind mount → dein Code ist live im Container
+    working_dir: /app
+    command: bash     # interaktiver Start
