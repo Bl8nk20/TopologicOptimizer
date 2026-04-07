@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>System Status</title>
+
+<style>
+  :root {
+    --bg: #0f1117;
+    --surface: #1a1d27;
+    --border: #2e3350;
+    --text: #e2e8f0;
+    --muted: #8892a4;
+    --green: #1d9e75;
+  }
+
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: system-ui, sans-serif;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100vh;
+  }
+
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 28px 32px;
+    width: 320px;
+    text-align: center;
+  }
+
+  .status {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    margin-bottom: 12px;
+  }
+
+  .dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: var(--green);
+    box-shadow: 0 0 10px var(--green);
+  }
+
+  h1 {
+    font-size: 18px;
+    margin: 0;
+    font-weight: 500;
+  }
+
+  p {
+    margin: 8px 0 0;
+    color: var(--muted);
+    font-size: 13px;
+  }
+
+  .meta {
+    margin-top: 18px;
+    font-size: 12px;
+    color: var(--muted);
+  }
+
+  code {
+    background: #11131a;
+    padding: 3px 6px;
+    border-radius: 6px;
+  }
+</style>
+</head>
+
+<body>
+  <div class="card">
+    <div class="status">
+      <div class="dot"></div>
+      <h1>System läuft</h1>
+    </div>
+
+    <p>API ist erreichbar und bereit.</p>
+
+    <div class="meta">
+      Endpoint: <code>/health</code><br>
+      Status: <code>200 OK</code>
+    </div>
+  </div>
+</body>
+</html>

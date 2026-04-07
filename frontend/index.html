@@ -1,0 +1,622 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Topology Optimizer</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #0f1117;
+    --surface: #1a1d27;
+    --surface2: #22263a;
+    --border: #2e3350;
+    --text: #e2e8f0;
+    --text-muted: #8892a4;
+    --accent: #7f77dd;
+    --accent-dim: #534ab7;
+    --green: #1d9e75;
+    --red: #e24b4a;
+    --amber: #ef9f27;
+  }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Inter', system-ui, sans-serif;
+    font-size: 14px;
+    min-height: 100vh;
+    display: grid;
+    grid-template-rows: 52px 1fr;
+    grid-template-columns: 340px 1fr;
+  }
+
+  /* ── Header ── */
+  header {
+    grid-column: 1 / -1;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    padding: 0 24px;
+    gap: 12px;
+  }
+  header h1 { font-size: 16px; font-weight: 500; letter-spacing: 0.02em; }
+  .badge {
+    font-size: 11px;
+    background: var(--accent-dim);
+    color: #ccc9f6;
+    padding: 2px 8px;
+    border-radius: 10px;
+  }
+  .status-dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: var(--text-muted);
+    margin-left: auto;
+    transition: background 0.3s;
+  }
+  .status-dot.connected { background: var(--green); }
+  .status-dot.running { background: var(--amber); animation: pulse 1s infinite; }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+
+  /* ── Sidebar ── */
+  aside {
+    background: var(--surface);
+    border-right: 1px solid var(--border);
+    padding: 20px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+  }
+
+  .section-title {
+    font-size: 11px;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--text-muted);
+    margin-bottom: 10px;
+  }
+
+  .field { display: flex; flex-direction: column; gap: 5px; }
+  .field label { font-size: 12px; color: var(--text-muted); }
+
+  input[type="number"], select {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 7px 10px;
+    border-radius: 6px;
+    font-size: 13px;
+    width: 100%;
+    outline: none;
+    transition: border-color 0.15s;
+  }
+  input[type="number"]:focus, select:focus { border-color: var(--accent); }
+
+  input[type="range"] {
+    width: 100%;
+    accent-color: var(--accent);
+  }
+
+  .row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+
+  .btn {
+    padding: 10px 16px;
+    border-radius: 8px;
+    border: none;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: opacity 0.15s, transform 0.1s;
+    width: 100%;
+  }
+  .btn:active { transform: scale(0.98); }
+  .btn-primary { background: var(--accent); color: #fff; }
+  .btn-primary:hover { opacity: 0.9; }
+  .btn-primary:disabled { opacity: 0.4; cursor: not-allowed; }
+  .btn-secondary { background: var(--surface2); color: var(--text); border: 1px solid var(--border); }
+  .btn-secondary:hover { border-color: var(--accent); }
+  .btn-secondary:disabled { opacity: 0.4; cursor: not-allowed; }
+
+  /* ── Stats ── */
+  .stats {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+  .stat-card {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 10px 12px;
+  }
+  .stat-label { font-size: 10px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.06em; }
+  .stat-value { font-size: 18px; font-weight: 500; font-variant-numeric: tabular-nums; margin-top: 2px; }
+
+  /* ── Log ── */
+  .log {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 10px;
+    font-family: 'JetBrains Mono', 'Fira Code', monospace;
+    font-size: 11px;
+    height: 160px;
+    overflow-y: auto;
+    color: var(--text-muted);
+    line-height: 1.6;
+  }
+  .log-entry { color: var(--text-muted); }
+  .log-entry.ok { color: #5dcaa5; }
+  .log-entry.warn { color: var(--amber); }
+  .log-entry.err { color: var(--red); }
+
+  /* ── Main canvas area ── */
+  main {
+    display: grid;
+    grid-template-rows: 1fr auto;
+    overflow: hidden;
+  }
+
+  #canvas-container {
+    position: relative;
+    background: var(--bg);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+  }
+
+  canvas#topo-canvas {
+    display: block;
+    image-rendering: pixelated;
+  }
+
+  #placeholder {
+    text-align: center;
+    color: var(--text-muted);
+    pointer-events: none;
+  }
+  #placeholder .icon {
+    width: 48px; height: 48px;
+    border: 2px dashed var(--border);
+    border-radius: 12px;
+    margin: 0 auto 12px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 22px;
+  }
+
+  /* ── Compliance chart ── */
+  #chart-area {
+    height: 120px;
+    border-top: 1px solid var(--border);
+    background: var(--surface);
+    padding: 12px 16px;
+    position: relative;
+  }
+  .chart-title { font-size: 11px; color: var(--text-muted); margin-bottom: 6px; }
+  canvas#chart-canvas { display: block; width: 100%; height: 80px; }
+
+  /* ── Threshold slider overlay ── */
+  .threshold-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 0 0;
+  }
+  .threshold-row label { font-size: 12px; color: var(--text-muted); white-space: nowrap; }
+  .threshold-row span { font-size: 12px; min-width: 32px; text-align: right; font-variant-numeric: tabular-nums; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Topology Optimizer</h1>
+  <span class="badge">SIMP · FEM</span>
+  <div class="status-dot" id="status-dot"></div>
+</header>
+
+<aside>
+  <!-- Grid settings -->
+  <div>
+    <p class="section-title">Gitter</p>
+    <div class="row">
+      <div class="field">
+        <label>Breite (nelx)</label>
+        <input type="number" id="nelx" value="60" min="4" max="200">
+      </div>
+      <div class="field">
+        <label>Höhe (nely)</label>
+        <input type="number" id="nely" value="30" min="4" max="200">
+      </div>
+    </div>
+  </div>
+
+  <!-- Scenario -->
+  <div>
+    <p class="section-title">Lastfall</p>
+    <div class="field">
+      <label>Szenario</label>
+      <select id="scenario">
+        <option value="cantilever">Kragarm</option>
+        <option value="bridge">Brücke</option>
+        <option value="mbb_beam">MBB-Beam (Benchmark)</option>
+      </select>
+    </div>
+  </div>
+
+  <!-- Optimization params -->
+  <div>
+    <p class="section-title">Optimierung</p>
+    <div class="field">
+      <label>Volumenfraktion: <span id="vf-label">0.40</span></label>
+      <input type="range" id="vf" min="0.1" max="0.9" step="0.05" value="0.4"
+             oninput="document.getElementById('vf-label').textContent=parseFloat(this.value).toFixed(2)">
+    </div>
+    <div class="field" style="margin-top:10px">
+      <label>SIMP Penalty: <span id="pen-label">3.0</span></label>
+      <input type="range" id="penalty" min="1" max="5" step="0.5" value="3"
+             oninput="document.getElementById('pen-label').textContent=parseFloat(this.value).toFixed(1)">
+    </div>
+    <div class="field" style="margin-top:10px">
+      <label>Filterradius: <span id="fr-label">1.5</span></label>
+      <input type="range" id="filter-radius" min="0.5" max="4" step="0.5" value="1.5"
+             oninput="document.getElementById('fr-label').textContent=parseFloat(this.value).toFixed(1)">
+    </div>
+    <div class="row" style="margin-top:10px">
+      <div class="field">
+        <label>Max. Iterationen</label>
+        <input type="number" id="max-iter" value="80" min="5" max="500">
+      </div>
+      <div class="field">
+        <label>Konvergenz</label>
+        <input type="number" id="conv-tol" value="0.01" min="0.001" max="0.1" step="0.001">
+      </div>
+    </div>
+  </div>
+
+  <!-- Stats -->
+  <div>
+    <p class="section-title">Status</p>
+    <div class="stats">
+      <div class="stat-card">
+        <div class="stat-label">Iteration</div>
+        <div class="stat-value" id="stat-iter">—</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Compliance</div>
+        <div class="stat-value" id="stat-comp">—</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Vol.-Fraktion</div>
+        <div class="stat-value" id="stat-vf">—</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Δ Dichte</div>
+        <div class="stat-value" id="stat-dc">—</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Threshold -->
+  <div>
+    <p class="section-title">Anzeige</p>
+    <div class="threshold-row">
+      <label>Schwellwert</label>
+      <input type="range" id="threshold" min="0.1" max="0.9" step="0.05" value="0.5"
+             oninput="updateThresholdLabel(this.value); redrawCanvas()">
+      <span id="thresh-label">0.50</span>
+    </div>
+  </div>
+
+  <!-- Buttons -->
+  <div style="display:flex; flex-direction:column; gap:8px; margin-top:auto">
+    <button class="btn btn-primary" id="btn-run" onclick="startJob()">
+      Optimierung starten
+    </button>
+    <div class="row">
+      <button class="btn btn-secondary" id="btn-vtk" disabled onclick="downloadFile('vtk')">
+        VTK laden
+      </button>
+      <button class="btn btn-secondary" id="btn-csv" disabled onclick="downloadFile('csv')">
+        CSV laden
+      </button>
+    </div>
+  </div>
+
+  <!-- Log -->
+  <div>
+    <p class="section-title">Log</p>
+    <div class="log" id="log"></div>
+  </div>
+</aside>
+
+<main>
+  <div id="canvas-container">
+    <div id="placeholder">
+      <div class="icon">◈</div>
+      <p>Konfiguration wählen und</p>
+      <p>Optimierung starten</p>
+    </div>
+    <canvas id="topo-canvas" style="display:none"></canvas>
+  </div>
+
+  <div id="chart-area">
+    <div class="chart-title">Compliance-Verlauf</div>
+    <canvas id="chart-canvas"></canvas>
+  </div>
+</main>
+
+<script>
+
+let currentJobId = null;
+let currentWs = null;
+let lastDensities = null;
+let complianceHistory = [];
+let nelx = 60, nely = 30;
+const API = window.location.origin;
+
+// ── Logging ──────────────────────────────────────────────────────────────────
+function log(msg, type = '') {
+  const el = document.getElementById('log');
+  const entry = document.createElement('div');
+  entry.className = 'log-entry ' + type;
+  const time = new Date().toLocaleTimeString('de', { hour12: false });
+  entry.textContent = `[${time}] ${msg}`;
+  el.appendChild(entry);
+  el.scrollTop = el.scrollHeight;
+}
+
+// ── Job starten ───────────────────────────────────────────────────────────────
+async function startJob() {
+  if (currentWs) { currentWs.close(); }
+
+  nelx = parseInt(document.getElementById('nelx').value);
+  nely = parseInt(document.getElementById('nely').value);
+
+  const body = {
+    nelx,
+    nely,
+    scenario: document.getElementById('scenario').value,
+    config: {
+      volume_fraction: parseFloat(document.getElementById('vf').value),
+      penalty: parseFloat(document.getElementById('penalty').value),
+      filter_radius: parseFloat(document.getElementById('filter-radius').value),
+      max_iterations: parseInt(document.getElementById('max-iter').value),
+      convergence_tolerance: parseFloat(document.getElementById('conv-tol').value),
+      move_limit: 0.2,
+      oc_eta: 0.5,
+    }
+  };
+
+  log(`Starte Job: ${nelx}×${nely}, VF=${body.config.volume_fraction}`, 'ok');
+  setStatus('running');
+
+  document.getElementById('btn-run').disabled = true;
+  document.getElementById('btn-vtk').disabled = true;
+  document.getElementById('btn-csv').disabled = true;
+  complianceHistory = [];
+
+  try {
+    const resp = await fetch(`${API}/api/jobs`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+
+    if (!resp.ok) {
+      const err = await resp.json();
+      log(`Fehler: ${err.error}`, 'err');
+      setStatus('');
+      document.getElementById('btn-run').disabled = false;
+      return;
+    }
+
+    const data = await resp.json();
+    currentJobId = data.id;
+    log(`Job ID: ${data.id}`);
+
+    connectWebSocket(data.id);
+  } catch (e) {
+    log(`Netzwerkfehler: ${e.message}`, 'err');
+    setStatus('');
+    document.getElementById('btn-run').disabled = false;
+  }
+}
+
+// ── WebSocket ─────────────────────────────────────────────────────────────────
+function connectWebSocket(jobId) {
+  const protocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
+  const wsUrl = `${protocol}//${location.host}/api/jobs/${jobId}/ws`;
+
+  log(`WS verbinde: ${wsUrl}`);
+
+  const ws = new WebSocket(wsUrl);
+  currentWs = ws;
+
+  ws.onopen = () => {
+    log('WebSocket verbunden', 'ok');
+    setStatus('connected');
+    document.getElementById('status-dot').classList.add('running');
+  };
+
+  ws.onmessage = (event) => {
+    const msg = JSON.parse(event.data);
+
+    if (msg.type === 'connected') {
+      log(`Stream bereit für Job ${msg.job_id}`);
+    }
+
+    else if (msg.type === 'iteration') {
+      document.getElementById('stat-iter').textContent = msg.iteration;
+      document.getElementById('stat-comp').textContent = msg.compliance.toExponential(3);
+      document.getElementById('stat-vf').textContent = msg.volume_fraction.toFixed(3);
+      document.getElementById('stat-dc').textContent = msg.density_change.toFixed(4);
+
+      lastDensities = msg.densities;
+      complianceHistory.push(msg.compliance);
+
+      redrawCanvas();
+      redrawChart();
+
+      document.getElementById('placeholder').style.display = 'none';
+      document.getElementById('topo-canvas').style.display = 'block';
+    }
+
+    else if (msg.type === 'done') {
+      const conv = msg.converged ? 'konvergiert' : 'max. Iterationen';
+      log(`Fertig nach ${msg.iterations} Iterationen (${conv})`, 'ok');
+      setStatus('connected');
+      document.getElementById('btn-run').disabled = false;
+      document.getElementById('btn-vtk').disabled = false;
+      document.getElementById('btn-csv').disabled = false;
+      document.getElementById('status-dot').classList.remove('running');
+    }
+
+    else if (msg.type === 'failed') {
+      log(`Job fehlgeschlagen: ${msg.error}`, 'err');
+      setStatus('');
+      document.getElementById('btn-run').disabled = false;
+    }
+  };
+
+  ws.onerror = () => log('WebSocket Fehler', 'err');
+  ws.onclose = () => {
+    log('WebSocket getrennt');
+    document.getElementById('status-dot').classList.remove('running');
+  };
+}
+// ── Canvas Rendering ──────────────────────────────────────────────────────────
+function redrawCanvas() {
+  if (!lastDensities) return;
+
+  const canvas = document.getElementById('topo-canvas');
+  const container = document.getElementById('canvas-container');
+  const threshold = parseFloat(document.getElementById('threshold').value);
+
+  // Canvas-Größe: Pixel pro Element so groß wie möglich
+  const maxW = container.clientWidth - 20;
+  const maxH = container.clientHeight - 20;
+  const pixSize = Math.max(1, Math.min(
+    Math.floor(maxW / nelx),
+    Math.floor(maxH / nely)
+  ));
+
+  canvas.width  = nelx * pixSize;
+  canvas.height = nely * pixSize;
+
+  const ctx = canvas.getContext('2d');
+  const img = ctx.createImageData(nelx * pixSize, nely * pixSize);
+
+  for (let row = 0; row < nely; row++) {
+    for (let col = 0; col < nelx; col++) {
+      const elemId = row * nelx + col;
+      const rho = lastDensities[elemId] ?? 0;
+
+      // Farbe: Lila-Spektrum statt Graustufen
+      let r, g, b;
+      if (rho >= threshold) {
+        // Festes Material: tieflila → hellpurpur je nach Dichte
+        const t = (rho - threshold) / (1.0 - threshold);
+        r = Math.round(83  + t * (127 - 83));   // 83→127
+        g = Math.round(74  + t * (119 - 74));   // 74→119
+        b = Math.round(183 + t * (221 - 183));  // 183→221
+      } else {
+        // Leer: sehr dunkler Hintergrund
+        const t = rho / threshold;
+        r = Math.round(15 + t * 30);
+        g = Math.round(17 + t * 33);
+        b = Math.round(23 + t * 44);
+      }
+
+      // Pixel setzen (von oben = höchste y-Zeile)
+      const displayRow = (nely - 1 - row); // y-Achse flippen
+      for (let py = 0; py < pixSize; py++) {
+        for (let px = 0; px < pixSize; px++) {
+          const idx = ((displayRow * pixSize + py) * nelx * pixSize + col * pixSize + px) * 4;
+          img.data[idx]     = r;
+          img.data[idx + 1] = g;
+          img.data[idx + 2] = b;
+          img.data[idx + 3] = 255;
+        }
+      }
+    }
+  }
+
+  ctx.putImageData(img, 0, 0);
+}
+
+// ── Compliance Chart ──────────────────────────────────────────────────────────
+function redrawChart() {
+  const canvas = document.getElementById('chart-canvas');
+  const dpr = window.devicePixelRatio || 1;
+  const w = canvas.offsetWidth;
+  const h = canvas.offsetHeight;
+  canvas.width  = w * dpr;
+  canvas.height = h * dpr;
+
+  const ctx = canvas.getContext('2d');
+  ctx.scale(dpr, dpr);
+
+  if (complianceHistory.length < 2) return;
+
+  const data = complianceHistory;
+  const minV = Math.min(...data) * 0.95;
+  const maxV = Math.max(...data) * 1.05;
+  const range = maxV - minV || 1;
+
+  ctx.clearRect(0, 0, w, h);
+
+  // Linie
+  ctx.beginPath();
+  ctx.strokeStyle = '#7f77dd';
+  ctx.lineWidth = 1.5;
+  ctx.lineJoin = 'round';
+
+  for (let i = 0; i < data.length; i++) {
+    const x = (i / (data.length - 1)) * w;
+    const y = h - ((data[i] - minV) / range) * h;
+    i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+  }
+  ctx.stroke();
+
+  // Letzter Wert
+  const lastX = w;
+  const lastY = h - ((data[data.length-1] - minV) / range) * h;
+  ctx.fillStyle = '#7f77dd';
+  ctx.beginPath();
+  ctx.arc(lastX - 2, lastY, 3, 0, Math.PI * 2);
+  ctx.fill();
+}
+
+// ── Download ──────────────────────────────────────────────────────────────────
+async function downloadFile(format) {
+  if (!currentJobId) return;
+  const url = `${API}/api/jobs/${currentJobId}/${format}`;
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `job_${currentJobId}.${format}`;
+  a.click();
+  log(`Download: ${format.toUpperCase()}`, 'ok');
+}
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
+function setStatus(state) {
+  const dot = document.getElementById('status-dot');
+  dot.className = 'status-dot' + (state ? ' ' + state : '');
+}
+
+function updateThresholdLabel(v) {
+  document.getElementById('thresh-label').textContent = parseFloat(v).toFixed(2);
+}
+
+window.addEventListener('resize', redrawCanvas);
+
+log('Bereit. Server unter localhost:3000 starten.', 'ok');
+</script>
+</body>
+</html>
